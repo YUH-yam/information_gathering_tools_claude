@@ -1,0 +1,388 @@
+/* components.css - 再利用するUIパーツ
+   役割: button, card, pill, badge, modal, toast, banner, chip, hero, streak, input, link-list */
+
+/* ===== カード ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+.card-soft {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.10), rgba(56, 189, 248, 0.06));
+  border-color: rgba(245, 158, 11, 0.30);
+}
+
+/* ===== ボタン ===== */
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: transform 0.05s ease;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--accent);
+  color: #1f1300;
+  border-color: var(--accent);
+}
+.btn-ghost { background: transparent; }
+.btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.30);
+}
+.btn-ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.30);
+}
+.btn-info {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border-color: rgba(56, 189, 248, 0.30);
+}
+.btn-block { width: 100%; }
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: inherit;
+}
+.icon-btn:active { transform: scale(0.96); }
+
+/* ===== ピル・バッジ ===== */
+.pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--text-sub);
+  font-size: 11px;
+  border: 1px solid var(--border);
+}
+.pill-imp-high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.30);
+}
+.pill-imp-mid {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.30);
+}
+.pill-imp-low {
+  background: rgba(100, 116, 139, 0.15);
+  color: #cbd5e1;
+  border-color: rgba(100, 116, 139, 0.30);
+}
+.pill-cat {
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  border-color: rgba(56, 189, 248, 0.30);
+}
+.pill-tag {
+  background: rgba(167, 139, 250, 0.12);
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.30);
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-ok { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+.badge-warn { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+.badge-info { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+
+/* ストリークチップ・お休み券 */
+.streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+}
+.freeze-chip {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ===== バナー・ヒーロー ===== */
+.banner {
+  background: rgba(56, 189, 248, 0.10);
+  border: 1px solid rgba(56, 189, 248, 0.30);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  color: #bae6fd;
+  font-size: 13px;
+}
+.banner b { color: #e0f2fe; }
+
+.hero {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(56, 189, 248, 0.10));
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.hero h2 { margin: 0 0 4px; font-size: 16px; }
+.hero p { margin: 0; color: var(--text-sub); font-size: 12px; }
+
+/* ===== チップ (選択UI) ===== */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.chip.selected {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ===== 入力 ===== */
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="time"],
+textarea,
+select {
+  width: 100%;
+  background: var(--bg-deep);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+label.field {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+label.field .lbl {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ===== モーダル ===== */
+.modal-back {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal {
+  background: var(--bg-card);
+  width: 100%;
+  max-width: var(--max-w);
+  border-radius: 18px 18px 0 0;
+  padding: 16px 16px calc(16px + var(--safe-bottom));
+  border-top: 1px solid var(--border);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.modal .close-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* ===== トースト ===== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  z-index: 200;
+  font-size: 13px;
+  max-width: 90%;
+  animation: toast-fade 2s ease forwards;
+  pointer-events: none;
+}
+@keyframes toast-fade {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  10% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ===== タブ ===== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-elev);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.tabs button {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: var(--text-sub);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tabs button.active {
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+/* ===== リンクリスト ===== */
+.link-list a {
+  display: block;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--text);
+  text-decoration: none;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.link-list a .arrow {
+  float: right;
+  color: var(--text-sub);
+}
+
+/* ===== details (折りたたみ) ===== */
+details.detail { margin-top: 8px; }
+details.detail summary {
+  cursor: pointer;
+  color: var(--text-sub);
+  font-size: 12px;
+  padding: 6px 0;
+  list-style: none;
+}
+details.detail summary::-webkit-details-marker { display: none; }
+details.detail summary::before {
+  content: "▸ ";
+  color: var(--text-mute);
+}
+details[open].detail summary::before { content: "▾ "; }
+details.detail .body {
+  padding: 6px 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* ===== コードブロック (レビュー出力) ===== */
+.review-md {
+  background: var(--bg-deep);
+  padding: 12px;
+  border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--border);
+  color: #cbd5e1;
+  margin: 0;
+}
+
+/* ===== ストリークメーター ===== */
+.streak-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  text-align: center;
+}
+.streak-card .item {
+  background: var(--bg-elev);
+  border-radius: 10px;
+  padding: 10px 4px;
+}
+.streak-card .num {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.streak-card .lbl {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+
+/* ===== チェックリスト ===== */
+ul.check {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+ul.check li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+ul.check li::before {
+  content: "□ ";
+  margin-right: 4px;
+  color: var(--text-mute);
+}

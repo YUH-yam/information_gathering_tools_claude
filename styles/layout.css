@@ -1,0 +1,112 @@
+/* layout.css - 全体レイアウト、ヘッダ、メイン、ボトムナビ
+   役割: アプリケーションの骨格となる主要レイアウトコンポーネント */
+
+body {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
+  background: var(--bg);
+  position: relative;
+}
+
+/* ヘッダ */
+header.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: saturate(160%) blur(10px);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #1f1300;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+}
+.brand-title { font-size: 15px; }
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-sub);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/* メイン */
+main {
+  padding: 12px 14px 24px;
+}
+
+h2.section-title {
+  font-size: 16px;
+  margin: 18px 4px 8px;
+  color: var(--text);
+}
+h2.section-title .sub {
+  color: var(--text-sub);
+  font-weight: 400;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+/* ボトムナビ */
+nav.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 6px 4px calc(6px + var(--safe-bottom));
+  height: calc(var(--nav-h) + var(--safe-bottom));
+}
+nav.bottom-nav button {
+  background: transparent;
+  border: 0;
+  color: var(--text-sub);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 10.5px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+nav.bottom-nav button .emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+nav.bottom-nav button.active {
+  color: var(--accent);
+}
+nav.bottom-nav button:active {
+  transform: scale(0.96);
+}

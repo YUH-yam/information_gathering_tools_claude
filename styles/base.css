@@ -1,0 +1,80 @@
+/* base.css - CSS変数、リセット、基本タイポグラフィ
+   役割: グローバルなトークン定義とドキュメント全体のベース */
+
+:root {
+  /* カラートークン */
+  --bg: #0f172a;
+  --bg-elev: #1e293b;
+  --bg-card: #1e293b;
+  --bg-deep: #0b1220;
+  --border: #334155;
+  --text: #e2e8f0;
+  --text-sub: #94a3b8;
+  --text-mute: #64748b;
+  --accent: #f59e0b;
+  --accent-soft: rgba(245, 158, 11, 0.15);
+  --ok: #10b981;
+  --warn: #f97316;
+  --danger: #ef4444;
+  --info: #38bdf8;
+
+  /* 形状・影 */
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+
+  /* レイアウト */
+  --nav-h: 64px;
+  --max-w: 520px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI",
+               "Segoe UI", "Noto Sans JP", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+/* セレクションカラー */
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* スクロールバー */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* 共通テキスト */
+.micro {
+  font-size: 11px;
+  color: var(--text-mute);
+}
+.text-sub { color: var(--text-sub); }
+.empty {
+  text-align: center;
+  color: var(--text-mute);
+  font-size: 13px;
+  padding: 24px 8px;
+}
+hr.div {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+a { color: var(--info); }

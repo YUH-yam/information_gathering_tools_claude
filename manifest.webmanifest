@@ -1,0 +1,21 @@
+{
+  "name": "時流インサイト・ログ",
+  "short_name": "時流ログ",
+  "description": "国内外の時流を低い認知負荷で集め、示唆に変える個人用インテリジェンスツール",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "ja",
+  "categories": ["productivity", "news"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}

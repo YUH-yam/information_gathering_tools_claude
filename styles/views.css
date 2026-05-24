@@ -1,0 +1,132 @@
+/* views.css - 各画面に固有のスタイル
+   役割: 記事カード、ミッション、設定行、テスト結果など画面専用パーツ */
+
+/* ===== 記事カード ===== */
+.article {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.article .meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.article h3.title {
+  margin: 4px 0 6px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.article .summary {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.article .actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+.article .actions .btn {
+  font-size: 12px;
+  padding: 8px 4px;
+}
+
+/* ===== ミッションカード (ホーム) ===== */
+.mission {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.mission-emoji { font-size: 28px; }
+.mission-text { flex: 1; }
+.mission-text .title { font-weight: 700; }
+.mission-text .desc {
+  color: var(--text-sub);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.mission .done-badge {
+  background: var(--ok);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ===== 設定画面 ===== */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.setting-row:last-child { border-bottom: 0; }
+.setting-row .label { font-size: 13px; }
+.setting-row .desc {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+
+/* ===== メモカード ===== */
+.memo {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.memo h3 {
+  margin: 4px 0;
+  font-size: 14px;
+}
+.memo .micro-row {
+  margin-top: 6px;
+}
+
+/* ===== クイックグリッド (ホームのショートカット) ===== */
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ===== テスト結果表示 ===== */
+.test-result-box {
+  margin-top: 8px;
+  display: none;
+  max-height: 50vh;
+  overflow: auto;
+}
+.test-result-box.visible { display: block; }
+.test-result-summary {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.test-result-summary.has-fail { color: #fca5a5; }
+
+/* ===== トレンド観測 ===== */
+.trend-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* ===== 検索・フィルタ ===== */
+.search-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.search-row select { width: auto; }
