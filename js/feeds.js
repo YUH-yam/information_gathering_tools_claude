@@ -72,7 +72,8 @@ export async function fetchFeedAndStore(feed) {
     const res = addArticleQuick({
       title: title || url, url, summary,
       source_name: feed.feed_name,
-      category: feed.category || ""
+      category: feed.category || "",
+      status: "inbox" // RSS自動取得は「未判定」。今日見るで処理してから保存記事へ
     });
     if (res.ok) added++; else skipped++;
   });

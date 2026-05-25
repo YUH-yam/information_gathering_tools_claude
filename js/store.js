@@ -60,7 +60,9 @@ export const Store = {
         // 第2弾: マルチ端末同期 / RSS
         auto_pull_on_startup: false,
         cors_proxy_enabled: true,
-        cors_proxy_url: ""
+        cors_proxy_url: "",
+        // 第3弾: テーマ
+        theme: "auto"
       },
       streak: {
         current: 0,
@@ -109,6 +111,10 @@ export const Store = {
     const defaults = this.initial();
     for (const k of Object.keys(defaults)) {
       if (this.state[k] === undefined) this.state[k] = defaults[k];
+    }
+    // settings ネストの欠落補完 (将来追加分含む)
+    for (const k of Object.keys(defaults.settings)) {
+      if (this.state.settings[k] === undefined) this.state.settings[k] = defaults.settings[k];
     }
   }
 };

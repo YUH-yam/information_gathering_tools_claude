@@ -12,10 +12,13 @@ import { markActive } from "./streak.js";
 import { syncRowAsync } from "./sync.js";
 import { TODAY_LIMIT } from "./config.js";
 
-/** 記事を1件追加。重複(URL正規化一致)は弾く */
+/** 記事を1件追加。重複(URL正規化一致)は弾く
+ *  status="saved"（既定）: 手動保存。保存記事画面に表示
+ *  status="inbox"        : RSS取得など自動取り込み。今日見るで判定するまで保存記事には入らない
+ */
 export function addArticleQuick({
   title, url, summary = "", source_name = "", category = "", tags = [],
-  importance = "", user_memo = ""
+  importance = "", user_memo = "", status = "saved"
 }) {
   const state = Store.state;
   const norm = normalizeURL(url);
@@ -35,7 +38,7 @@ export function addArticleQuick({
     category, tags,
     importance,
     importance_score: 0,
-    status: "saved",
+    status, // "saved" | "inbox" | "discarded"
     summary,
     ai_summary: "",
     ai_insight: "",
@@ -89,7 +92,11 @@ export function deleteArticle(id) {
   }
 }
 
-/** ホーム/今日見るの記事抽出 (アーカイブ除外、重要度スコア順、上限N件) */
+/** ホーム/今日見るの記事抽出
+ *  - inbox (未判定) と saved を対象に
+ *  - inbox を優先 (重要度スコア + inboxボーナス) して上位N件
+ *  - discarded / archived は除外
+ */
 export function pickTodayArticles(limit = TODAY_LIMIT) {
   const items = Store.state.articles.filter(
     (a) => !a.archived_flag && a.status !== "discarded"
@@ -97,8 +104,15 @@ export function pickTodayArticles(limit = TODAY_LIMIT) {
   const ctx = buildClassificationContext(Store.state);
   items.forEach((a) => {
     const cls = calculateImportance(a, ctx);
-    a._sort_score = cls.score;
+    // inbox（未判定）にはボーナス。先に判定してもらいたい
+    const bonus = a.status === "inbox" ? 15 : 0;
+    a._sort_score = cls.score + bonus;
   });
   items.sort((a, b) => b._sort_score - a._sort_score);
   return items.slice(0, limit);
+}
+
+/** 受信箱(inbox)の件数 */
+export function inboxCount() {
+  return Store.state.articles.filter((a) => a.status === "inbox" && !a.archived_flag).length;
 }

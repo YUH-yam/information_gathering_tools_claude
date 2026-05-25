@@ -10,9 +10,11 @@ import { Store } from "./store.js";
 import { route, renderStreakChip, toast, openAddArticleModal, openAddMemoModal } from "./ui.js";
 import { handleStartupQuery } from "./share-handler.js";
 import { pullAll } from "./sync.js";
+import { initTheme } from "./theme.js";
 
 function bootstrap() {
   Store.load();
+  initTheme(); // テーマを最優先で適用 (描画前)
   renderStreakChip();
   route("home");
 

@@ -40,10 +40,11 @@
   letter-spacing: 0.02em;
 }
 .btn:active { transform: scale(0.97); }
-.btn:hover { background: color-mix(in srgb, var(--bg-elev) 85%, white); }
+/* hover: テーマ非依存。bg-elev に text色を15%混ぜる → ダークで明・ライトで暗 */
+.btn:hover { background: color-mix(in srgb, var(--bg-elev) 85%, var(--text)); }
 .btn-primary {
   background: var(--accent);
-  color: #1f1300;
+  color: var(--accent-on);
   border-color: var(--accent);
 }
 .btn-ghost { background: transparent; }
@@ -116,6 +117,20 @@
   background: rgba(167, 139, 250, 0.12);
   color: #c4b5fd;
   border-color: rgba(167, 139, 250, 0.30);
+}
+/* 未判定 (inbox): RSS自動取得などまだ判断していない記事 */
+.pill-inbox {
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  border-color: rgba(56, 189, 248, 0.40);
+  font-weight: 700;
+}
+/* 不要 (discarded): 振り分けて非表示にした記事。復元可能 */
+.pill-discard {
+  background: rgba(148, 163, 184, 0.18);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.35);
+  font-weight: 700;
 }
 
 .badge {
@@ -241,7 +256,7 @@ label.field .lbl {
 .modal-back {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--scrim);
   z-index: var(--z-dialog);
   display: flex;
   align-items: flex-end;
@@ -351,7 +366,7 @@ label.field .lbl {
   font-size: 13px;
   transition: background var(--motion-fast) var(--ease-standard);
 }
-.link-list a:hover { background: color-mix(in srgb, var(--bg-elev) 80%, white); }
+.link-list a:hover { background: color-mix(in srgb, var(--bg-elev) 80%, var(--text)); }
 .link-list a .arrow {
   float: right;
   color: var(--text-sub);

@@ -11,7 +11,8 @@ import {
   safeURL, normalizeURL, domainOf, frequencyMap, inRange, isBlank
 } from "./utils.js";
 import { detectCategory, detectTags, calculateImportance } from "./classifier.js";
-import { addArticleQuick, pickTodayArticles } from "./articles.js";
+import { addArticleQuick, pickTodayArticles, deleteArticle, updateArticle, inboxCount } from "./articles.js";
+import { resolveTheme } from "./theme.js";
 import { addMemoQuick } from "./memos.js";
 import { generateWeeklyReview, generateMonthlyReview, renderWeeklyMarkdown } from "./reviews.js";
 import { buildArticlesCSV } from "./exporter.js";
@@ -237,6 +238,68 @@ export function __runSelfTests() {
     // タグの "|" 区切り → 配列復元
     const mergeResult2 = mergeRows([], [{ id: "x", updated_at: "2026-05-01T00:00:00Z", tags: "AI|CX|DX" }], "id");
     assert("merge: tags|を配列化", Array.isArray(mergeResult2.list[0].tags) && mergeResult2.list[0].tags.length === 3);
+
+    /* ---- theme.js: resolveTheme は純粋関数 ---- */
+    // 明示指定はそのまま返す
+    assert("theme: light指定はlight", resolveTheme("light") === "light");
+    assert("theme: dark指定はdark", resolveTheme("dark") === "dark");
+    // auto: 注入したmatchMediaモックでOS設定をエミュレート
+    const mmLight = (q) => ({ matches: q === "(prefers-color-scheme: light)" });
+    const mmDark  = (q) => ({ matches: false });
+    assert("theme: auto+OSがlight→light", resolveTheme("auto", mmLight) === "light");
+    assert("theme: auto+OSがdark→dark", resolveTheme("auto", mmDark) === "dark");
+    assert("theme: 不明値+OSがlight→light", resolveTheme("xxx", mmLight) === "light");
+    // matchMedia不在のフォールバック
+    assert("theme: matchMedia無し→darkにフォールバック", resolveTheme("auto", null) === "dark");
+
+    /* ---- 記事ステータス: saved / inbox / discarded ---- */
+    Store.state.articles = [];
+    // 手動保存はデフォルトで saved
+    const aSaved = addArticleQuick({ title: "manual", url: "https://example.com/manual" });
+    assert("status: 手動保存はsaved", aSaved.ok && aSaved.article.status === "saved");
+    // 明示的に inbox 指定 (RSS 経由を再現)
+    const aInbox = addArticleQuick({ title: "rss item", url: "https://rss.example.com/1", status: "inbox" });
+    assert("status: status=inbox指定が保持される", aInbox.ok && aInbox.article.status === "inbox");
+    // inboxCount は inbox のみカウント
+    assert("status: inboxCount=1", inboxCount() === 1);
+    // 「今日見る」では inbox も表示される
+    const todayArts = pickTodayArticles();
+    const todayHasInbox = todayArts.some((x) => x.article_id === aInbox.article.article_id);
+    assert("status: pickTodayはinboxも対象に含む", todayHasInbox);
+    // discarded は除外
+    aInbox.article.status = "discarded"; aInbox.article.archived_flag = true; Store.save();
+    const todayArts2 = pickTodayArticles();
+    assert("status: pickTodayはdiscardedを除外", !todayArts2.some((x) => x.article_id === aInbox.article.article_id));
+    assert("status: inboxCountはdiscarded化で0", inboxCount() === 0);
+
+    /* ---- 削除と保存解除 ---- */
+    Store.state.articles = [];
+    const aDel = addArticleQuick({ title: "to delete", url: "https://example.com/del" });
+    const idDel = aDel.article.article_id;
+    deleteArticle(idDel);
+    assert("delete: 完全削除で配列から消える",
+      !Store.state.articles.some((x) => x.article_id === idDel));
+
+    // 保存解除: saved → inbox に戻す (UIロジックを模倣)
+    Store.state.articles = [];
+    const aUnsave = addArticleQuick({ title: "to unsave", url: "https://example.com/unsave" });
+    aUnsave.article.status = "inbox";
+    aUnsave.article.archived_flag = false;
+    Store.save();
+    const reread = Store.state.articles.find((x) => x.article_id === aUnsave.article.article_id);
+    assert("unsave: saved→inboxへ戻せる", reread.status === "inbox");
+
+    // 不要復元: discarded → inbox
+    const aRestore = addArticleQuick({ title: "to restore", url: "https://example.com/restore" });
+    aRestore.article.status = "discarded";
+    aRestore.article.archived_flag = true;
+    Store.save();
+    // 復元処理を模倣
+    aRestore.article.status = "inbox";
+    aRestore.article.archived_flag = false;
+    Store.save();
+    const reread2 = Store.state.articles.find((x) => x.article_id === aRestore.article.article_id);
+    assert("restore: discarded→inboxへ復元", reread2.status === "inbox" && reread2.archived_flag === false);
 
   } catch (e) {
     fail++; lines.push("✗ 例外発生: " + (e && e.message ? e.message : String(e)));

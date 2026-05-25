@@ -11,7 +11,7 @@ import {
 } from "./utils.js";
 import { TODAY_LIMIT, TREND_LINKS, TREND_TEMPLATE, DEFAULT_CATEGORIES } from "./config.js";
 import {
-  addArticleQuick, updateArticle, pickTodayArticles
+  addArticleQuick, updateArticle, pickTodayArticles, deleteArticle
 } from "./articles.js";
 import { addMemoQuick, deleteMemo } from "./memos.js";
 import { generateWeeklyReview, generateMonthlyReview } from "./reviews.js";
@@ -25,6 +25,7 @@ import { isTodayDone, missedYesterday, StreakEvents, markActive } from "./streak
 import { loadSamples } from "./samples.js";
 import { __runSelfTests } from "./tests.js";
 import { renderDashboardHTML } from "./dashboard.js";
+import { setTheme } from "./theme.js";
 
 let currentRoute = "home";
 // ルーター経由でレビュータブを切り替えるためのバッファ
@@ -79,28 +80,52 @@ function renderArticleCardHTML(a) {
   const tags = (a.tags || []).slice(0, 3).map((t) => `<span class="pill pill-tag">${escapeHTML(t)}</span>`).join("");
   const src = a.source_name ? `<span class="pill">${escapeHTML(a.source_name)}</span>` : "";
   const summary = a.summary ? escapeHTML(a.summary).slice(0, 140) : "<span class='micro'>(要約なし)</span>";
+  // status: "saved" | "inbox" | "discarded"
+  const status = a.status || "saved";
+  const statusPill =
+    status === "inbox"     ? `<span class="pill pill-inbox">未判定</span>` :
+    status === "discarded" ? `<span class="pill pill-discard">不要</span>` :
+                             "";
+  // 状態に応じた操作群
+  let actions = "";
+  if (status === "discarded") {
+    // 不要 → 未判定に戻す/完全削除
+    actions = `
+      <button class="btn btn-ok" data-act="restore">↩ 復元 (未判定へ)</button>
+      <button class="btn btn-danger" data-act="trash">🗑 完全削除</button>`;
+  } else {
+    // saved / inbox 共通
+    actions = `
+      <button class="btn btn-ok" data-act="save">📌 ${status === "saved" ? "保存済" : "保存する"}</button>
+      <button class="btn btn-info" data-act="deep">🔍 深掘り</button>
+      <button class="btn" data-act="memo">📝 メモ</button>
+      <button class="btn btn-danger" data-act="discard">✕ 不要</button>`;
+  }
+  // 詳細メニュー内の操作（保存解除 / 完全削除など破壊的操作はここに集約）
+  let detailActions = `
+    <button class="btn" data-act="open">🔗 元記事を開く</button>
+    <button class="btn" data-act="bump">⬆ 重要度↑</button>
+    <button class="btn" data-act="review">📊 週次に送る</button>`;
+  if (status === "saved") {
+    detailActions += `<button class="btn" data-act="unsave">↩ 保存解除</button>`;
+  }
+  if (status !== "discarded") {
+    detailActions += `<button class="btn btn-danger" data-act="trash">🗑 完全削除</button>`;
+  }
+
   return `<div class="article" data-id="${a.article_id}">
     <div class="meta">
       <span class="pill ${impClass}">重要度: ${impLabel}</span>
-      ${cat}${src}${tags}
+      ${statusPill}${cat}${src}${tags}
     </div>
     <h3 class="title">${escapeHTML(a.title)}</h3>
     <div class="summary">${summary}</div>
-    <div class="actions">
-      <button class="btn btn-ok" data-act="save">📌 保存</button>
-      <button class="btn btn-info" data-act="deep">🔍 深掘り</button>
-      <button class="btn" data-act="memo">📝 メモ</button>
-      <button class="btn btn-danger" data-act="discard">✕ 不要</button>
-    </div>
-    ${a.url ? `<details class="detail"><summary>詳細・元記事</summary><div class="body">
-      <div class="micro">URL: <a href="${escapeHTML(a.url)}" target="_blank" rel="noopener">${escapeHTML(a.url)}</a></div>
+    <div class="actions">${actions}</div>
+    <details class="detail"><summary>詳細・操作</summary><div class="body">
+      ${a.url ? `<div class="micro">URL: <a href="${escapeHTML(a.url)}" target="_blank" rel="noopener">${escapeHTML(a.url)}</a></div>` : ""}
       ${a.user_memo ? `<div style="margin-top:6px;">📝 ${escapeHTML(a.user_memo)}</div>` : ""}
-      <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-        <button class="btn" data-act="open">🔗 元記事を開く</button>
-        <button class="btn" data-act="bump">⬆ 重要度↑</button>
-        <button class="btn" data-act="review">📊 週次に送る</button>
-      </div>
-    </div></details>` : ""}
+      <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">${detailActions}</div>
+    </div></details>
   </div>`;
 }
 
@@ -112,10 +137,34 @@ function bindArticleCardHandlers() {
         const a = Store.state.articles.find((x) => x.article_id === id);
         if (!a) return;
         const act = btn.dataset.act;
-        if (act === "save") { a.status = "saved"; Store.save(); markActive(); toast("保存しました"); }
+        if (act === "save") {
+          // inbox → saved に確定。すでに saved の場合は何もしない（UI 上はボタン文言で示す）
+          a.status = "saved";
+          a.archived_flag = false;
+          a.updated_at = nowISO();
+          Store.save(); markActive(); toast("保存しました"); route(currentRoute);
+        }
+        else if (act === "unsave") {
+          // 保存解除 → 未判定 (inbox) に戻す
+          a.status = "inbox";
+          a.archived_flag = false;
+          a.updated_at = nowISO();
+          Store.save(); toast("保存を解除しました（未判定）"); route(currentRoute);
+        }
         else if (act === "discard") {
           a.status = "discarded"; a.archived_flag = true;
+          a.updated_at = nowISO();
           Store.save(); markActive(); toast("不要に振り分けました"); route(currentRoute);
+        }
+        else if (act === "restore") {
+          // 不要 → 未判定に復元
+          a.status = "inbox"; a.archived_flag = false;
+          a.updated_at = nowISO();
+          Store.save(); toast("未判定に戻しました"); route(currentRoute);
+        }
+        else if (act === "trash") {
+          if (!confirm("この記事を完全に削除しますか？元には戻せません。")) return;
+          deleteArticle(id); toast("削除しました"); route(currentRoute);
         }
         else if (act === "deep") {
           a.use_cases = Array.from(new Set([...(a.use_cases || []), "深掘りする"]));
@@ -245,10 +294,21 @@ function renderToday(root) {
    8.3 保存記事
    ==================================================== */
 function renderSaved(root) {
-  const all = Store.state.articles.filter((a) => !a.archived_flag);
-  let html = `<h2 class="section-title">保存した記事 <span class="sub">${all.length}件</span></h2>
+  // 全記事を母集合に。ステータスフィルタで「保存／未判定／不要」を切り替える
+  const all = Store.state.articles;
+  const savedCount  = all.filter((a) => (a.status || "saved") === "saved" && !a.archived_flag).length;
+  const inboxCount  = all.filter((a) => a.status === "inbox" && !a.archived_flag).length;
+  const discardCount = all.filter((a) => a.status === "discarded").length;
+  let currentStatus = "saved"; // saved | inbox | discarded
+
+  let html = `<h2 class="section-title">記事一覧</h2>
     <div class="card">
-      <div class="search-row">
+      <div class="chip-row" id="statusChips" role="tablist" aria-label="ステータス">
+        <span class="chip selected" data-st="saved">📌 保存済 (${savedCount})</span>
+        <span class="chip" data-st="inbox">📥 未判定 (${inboxCount})</span>
+        <span class="chip" data-st="discarded">🗑 不要 (${discardCount})</span>
+      </div>
+      <div class="search-row" style="margin-top:8px;">
         <input type="text" id="srch" placeholder="キーワードで検索" />
         <select id="filterImp">
           <option value="">重要度すべて</option>
@@ -262,6 +322,17 @@ function renderSaved(root) {
     <div id="savedList"></div>`;
   root.innerHTML = html;
 
+  // ステータスチップ
+  $all("#statusChips .chip", root).forEach((el) => {
+    el.addEventListener("click", () => {
+      $all("#statusChips .chip", root).forEach((x) => x.classList.remove("selected"));
+      el.classList.add("selected");
+      currentStatus = el.dataset.st;
+      renderList();
+    });
+  });
+
+  // カテゴリチップ
   const catChips = $("#catChips", root);
   ["", ...DEFAULT_CATEGORIES].forEach((c, idx) => {
     const el = document.createElement("span");
@@ -283,6 +354,12 @@ function renderSaved(root) {
     const imp = $("#filterImp", root).value;
     const cat = $("#catChips .chip.selected", root)?.dataset.cat || "";
     const list = all.filter((a) => {
+      const st = a.status || "saved";
+      // ステータス一致
+      if (currentStatus === "saved" && !(st === "saved" && !a.archived_flag)) return false;
+      if (currentStatus === "inbox" && !(st === "inbox" && !a.archived_flag)) return false;
+      if (currentStatus === "discarded" && st !== "discarded") return false;
+      // 検索・フィルタ
       if (q && !((a.title || "").toLowerCase().includes(q)
         || (a.summary || "").toLowerCase().includes(q)
         || (a.user_memo || "").toLowerCase().includes(q))) return false;
@@ -291,9 +368,15 @@ function renderSaved(root) {
       return true;
     });
     const target = $("#savedList", root);
-    target.innerHTML = list.length === 0
-      ? `<div class="empty">該当する記事はありません</div>`
-      : list.map(renderArticleCardHTML).join("");
+    if (list.length === 0) {
+      const emptyMsg =
+        currentStatus === "saved"     ? "保存済の記事はまだありません" :
+        currentStatus === "inbox"     ? "未判定の記事はありません。RSS取得すると貯まります。" :
+                                        "不要に振り分けた記事はありません";
+      target.innerHTML = `<div class="empty">${emptyMsg}</div>`;
+    } else {
+      target.innerHTML = list.map(renderArticleCardHTML).join("");
+    }
     bindArticleCardHandlers();
   }
   renderList();
@@ -499,7 +582,22 @@ function renderTrends(root) {
    ==================================================== */
 function renderSettings(root) {
   const st = Store.state.settings;
-  root.innerHTML = `<h2 class="section-title">設定</h2>
+  root.innerHTML = `<h2 class="section-title">外観</h2>
+    <div class="card">
+      <div class="setting-row">
+        <div>
+          <div class="label">テーマ</div>
+          <div class="desc">ライト / ダーク / 自動（端末設定に追従）</div>
+        </div>
+        <select id="themeSelect" style="width:auto; min-width: 120px;">
+          <option value="auto" ${st.theme === "auto" ? "selected" : ""}>自動</option>
+          <option value="light" ${st.theme === "light" ? "selected" : ""}>ライト</option>
+          <option value="dark" ${st.theme === "dark" ? "selected" : ""}>ダーク</option>
+        </select>
+      </div>
+    </div>
+
+    <h2 class="section-title">設定</h2>
     <div class="card">
       <div class="setting-row">
         <div>
@@ -623,6 +721,7 @@ function renderSettings(root) {
 
     <p class="micro" style="text-align:center; margin-top:24px;">時流インサイト・ログ v1.0 / データはこの端末に保存されます</p>`;
 
+  bind("#themeSelect", (e) => { setTheme(e.target.value); toast("テーマを変更しました"); }, "change");
   bind("#dailyLimit", (e) => {
     st.daily_article_limit = Math.max(1, Math.min(50, parseInt(e.target.value || "10", 10)));
     Store.save();
