@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0f172a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<!--
+  status-bar-style:
+   - "default" / "black" にすると、iOS は OS のステータスバー領域を確保し、
+     コンテンツ側に被らせない（Dynamic Island/時計と被らない）
+   - "black-translucent" は侵入させる仕様。今回は確実性優先で "default" を採用
+-->
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="時流インサイト" />
 <meta name="description" content="国内外の時流を低い認知負荷で集め、示唆に変える個人用インテリジェンスツール" />
 <title>時流インサイト・ログ | Insight Intake</title>

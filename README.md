@@ -287,6 +287,8 @@ doPost（書き込み）に加え、doGet（シート取得 / RSSプロキシ）
 
 ## バージョン
 
+v1.3.0（Stratum Design System v2026.1 のUI/UX原則を反映：タップ領域44px / フォーカス可視化 / prefers-reduced-motion / 日本語組版palt / モーション・スペース・zインデックスのトークン化。色とレイアウトは現状維持。iPhone PWA 上部問題は status-bar-style="default" + body padding-top:safe-area の二重防御で解決）
+
 v1.2.1（GAS Code.gs / SETUP.md 独立ファイル化、iPhone Dynamic Island / 時計被り対応）
 
 v1.2（第2弾拡張：RSS自登録 / マルチ端末同期 / GAS doGet）

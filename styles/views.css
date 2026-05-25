@@ -30,12 +30,14 @@
 .article .actions {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 10px;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
 }
+/* Stratum: 4分割でも 44px の高さは維持 */
 .article .actions .btn {
   font-size: 12px;
-  padding: 8px 4px;
+  padding: 10px 4px;
+  min-height: var(--tap-min);
 }
 
 /* ===== ミッションカード (ホーム) ===== */
@@ -164,20 +166,23 @@
   display: block;
 }
 
-/* ===== RSSフィード一覧 ===== */
+/* ===== RSSフィード一覧 =====
+   Stratum: 各ボタンを 44px のタップ確保、行スペースは space-2 */
 .feed-item {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 10px;
+  padding: var(--space-3);
   background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 6px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
 }
 .feed-item .btn {
   padding: 6px 10px;
-  font-size: 13px;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  font-size: 14px;
 }
 
 /* ===== iOS風スイッチ ===== */

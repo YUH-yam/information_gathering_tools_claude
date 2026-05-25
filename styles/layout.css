@@ -5,32 +5,32 @@ body {
   max-width: var(--max-w);
   margin: 0 auto;
   min-height: 100vh;
+  /* iPhone PWA でステータスバー / Dynamic Island / 時計表示にコンテンツが
+     被らないよう、body 自体に safe-area-inset-top の余白を確保する。
+     status-bar-style="default" との併用で、二重防御。 */
+  padding-top: var(--safe-top);
   padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
   background: var(--bg);
   position: relative;
 }
 
 /* ヘッダ
-   iOS standalone (PWA) ではステータスバー / Dynamic Island / カメラホールの下に
-   コンテンツが潜り込むため、safe-area-inset-top 分のパディングを確保する。
-   iPhone 17 等の最新機種でも safe-area で吸収される。 */
+   body 側で safe-area を吸収済みなので、header は通常の sticky として動作。
+   sticky の top も safe-area 分自動的にずれる。 */
 header.app-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: var(--z-sticky, 20);
   background: rgba(15, 23, 42, 0.92);
   backdrop-filter: saturate(160%) blur(10px);
   -webkit-backdrop-filter: saturate(160%) blur(10px);
   border-bottom: 1px solid var(--border);
-  padding-top: calc(10px + var(--safe-top));
-  padding-bottom: 10px;
-  padding-left: max(16px, var(--safe-left));
-  padding-right: max(16px, var(--safe-right));
+  padding: 10px max(16px, var(--safe-left)) 10px max(16px, var(--safe-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: calc(48px + var(--safe-top));
+  min-height: 56px;
 }
 
 .brand {
@@ -82,7 +82,7 @@ nav.bottom-nav {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: var(--z-overlay);
   max-width: var(--max-w);
   margin: 0 auto;
   background: rgba(15, 23, 42, 0.96);
@@ -97,6 +97,7 @@ nav.bottom-nav {
   padding-right: max(4px, var(--safe-right));
   height: calc(var(--nav-h) + var(--safe-bottom));
 }
+/* Stratum: 各ボタン 44px 以上のタップ領域 */
 nav.bottom-nav button {
   background: transparent;
   border: 0;
@@ -109,6 +110,9 @@ nav.bottom-nav button {
   font-size: 10.5px;
   padding: 4px 0;
   cursor: pointer;
+  min-height: var(--tap-min);
+  font-family: inherit;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 nav.bottom-nav button .emoji {
   font-size: 20px;

@@ -1,39 +1,46 @@
 /* components.css - 再利用するUIパーツ
    役割: button, card, pill, badge, modal, toast, banner, chip, hero, streak, input, link-list */
 
-/* ===== カード ===== */
+/* ===== カード =====
+   Stratum: コンテナは radius=12px (lg), padding は space-5/6 */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: var(--space-4);
   box-shadow: var(--shadow);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .card-soft {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.10), rgba(56, 189, 248, 0.06));
   border-color: rgba(245, 158, 11, 0.30);
 }
 
-/* ===== ボタン ===== */
+/* ===== ボタン =====
+   Stratum: モバイル主要ボタンは 44×44px 以上 (WCAG 2.5.8 AA) */
 .btn {
   appearance: none;
   border: 1px solid var(--border);
   background: var(--bg-elev);
   color: var(--text);
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  min-height: var(--tap-min);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   cursor: pointer;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  transition: transform 0.05s ease;
+  gap: var(--space-1);
+  transition: transform var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard);
   font-family: inherit;
+  letter-spacing: 0.02em;
 }
 .btn:active { transform: scale(0.97); }
+.btn:hover { background: color-mix(in srgb, var(--bg-elev) 85%, white); }
 .btn-primary {
   background: var(--accent);
   color: #1f1300;
@@ -57,20 +64,24 @@
 }
 .btn-block { width: 100%; }
 
+/* アイコンボタン: WCAG 2.5.8 を満たす 44×44px */
 .icon-btn {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   font-family: inherit;
+  transition: transform var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard);
 }
-.icon-btn:active { transform: scale(0.96); }
+.icon-btn:active { transform: scale(0.95); }
+.icon-btn:hover { background: var(--bg-elev); }
 
 /* ===== ピル・バッジ ===== */
 .pill {
@@ -168,13 +179,17 @@
   gap: 4px;
 }
 .chip {
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 8px 12px;            /* タップ確保 */
+  border-radius: var(--radius-full);
   background: var(--bg-elev);
   border: 1px solid var(--border);
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
+  min-height: 32px;
+  transition: background var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
 }
 .chip.selected {
   background: var(--accent-soft);
@@ -182,7 +197,8 @@
   border-color: var(--accent);
 }
 
-/* ===== 入力 ===== */
+/* ===== 入力 =====
+   Stratum: 入力は radius-sm、最低 44px の高さ、フォーカスリングは :focus-visible で */
 input[type="text"],
 input[type="url"],
 input[type="number"],
@@ -193,46 +209,64 @@ select {
   background: var(--bg-deep);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  min-height: var(--tap-min);
+  font-size: 16px; /* iOS Safari の自動ズーム抑止には 16px が安全 */
   font-family: inherit;
   line-height: 1.5;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
 }
 textarea {
   min-height: 88px;
   resize: vertical;
+  line-height: 1.7; /* 和文本文向け */
 }
 label.field {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   font-size: 12px;
   color: var(--text-sub);
 }
 label.field .lbl {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
-/* ===== モーダル ===== */
+/* ===== モーダル =====
+   Stratum: radius=16px (xl), z=dialog, motion-slow で立ち上がる */
 .modal-back {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  z-index: 300;
+  z-index: var(--z-dialog);
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  animation: modal-fade var(--motion-base) var(--ease-standard);
 }
 .modal {
   background: var(--bg-card);
   width: 100%;
   max-width: var(--max-w);
-  border-radius: 18px 18px 0 0;
-  padding: 16px 16px calc(16px + var(--safe-bottom));
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-bottom));
   border-top: 1px solid var(--border);
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modal-rise var(--motion-slow) var(--ease-emphasized);
+}
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-rise {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 .modal h3 {
   margin: 0 0 12px;
@@ -245,7 +279,8 @@ label.field .lbl {
   margin-bottom: 8px;
 }
 
-/* ===== トースト ===== */
+/* ===== トースト =====
+   Stratum: 自動で消える + 最前面 + reduced-motion 対応 */
 .toast {
   position: fixed;
   left: 50%;
@@ -253,14 +288,14 @@ label.field .lbl {
   transform: translateX(-50%);
   background: var(--bg-card);
   color: var(--text);
-  padding: 10px 14px;
-  border-radius: 10px;
-  box-shadow: var(--shadow);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
-  z-index: 200;
+  z-index: var(--z-toast);
   font-size: 13px;
   max-width: 90%;
-  animation: toast-fade 2s ease forwards;
+  animation: toast-fade 2s var(--ease-standard) forwards;
   pointer-events: none;
 }
 @keyframes toast-fade {
@@ -270,55 +305,69 @@ label.field .lbl {
   100% { opacity: 0; }
 }
 
-/* ===== タブ ===== */
+/* ===== タブ =====
+   Stratum: タブ自身も 44px 以上の高さを確保 */
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   background: var(--bg-elev);
-  padding: 4px;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
 }
 .tabs button {
   flex: 1;
   background: transparent;
   border: 0;
   color: var(--text-sub);
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 10px var(--space-2);
+  min-height: var(--tap-min);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   cursor: pointer;
   font-family: inherit;
+  transition: background var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
 }
 .tabs button.active {
   background: var(--bg-card);
   color: var(--text);
 }
 
-/* ===== リンクリスト ===== */
+/* ===== リンクリスト =====
+   Stratum: リンク自体もタップ領域として 44px 以上を確保 */
 .link-list a {
-  display: block;
-  padding: 12px;
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  min-height: var(--tap-min);
+  border-radius: var(--radius-md);
   background: var(--bg-elev);
   color: var(--text);
   text-decoration: none;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   border: 1px solid var(--border);
   font-size: 13px;
+  transition: background var(--motion-fast) var(--ease-standard);
 }
+.link-list a:hover { background: color-mix(in srgb, var(--bg-elev) 80%, white); }
 .link-list a .arrow {
   float: right;
   color: var(--text-sub);
 }
 
-/* ===== details (折りたたみ) ===== */
-details.detail { margin-top: 8px; }
+/* ===== details (折りたたみ) =====
+   Stratum: 折りたたみのサマリーも 44px のタップ領域を確保 */
+details.detail { margin-top: var(--space-2); }
 details.detail summary {
   cursor: pointer;
   color: var(--text-sub);
-  font-size: 12px;
-  padding: 6px 0;
+  font-size: 13px;
+  padding: var(--space-3) 0;
+  min-height: var(--tap-min);
+  display: flex;
+  align-items: center;
   list-style: none;
 }
 details.detail summary::-webkit-details-marker { display: none; }
@@ -333,18 +382,22 @@ details.detail .body {
   font-size: 13px;
 }
 
-/* ===== コードブロック (レビュー出力) ===== */
+/* ===== コードブロック (レビュー出力) =====
+   Stratum: コードは radius-md、本文相当のサイズで読みやすく */
 .review-md {
   background: var(--bg-deep);
-  padding: 12px;
-  border-radius: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Geist Mono", monospace;
   font-size: 12px;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere; /* 和文セーフ改行 (jp-prose 相当) */
+  word-break: normal;
+  line-break: strict;
   border: 1px solid var(--border);
   color: #cbd5e1;
   margin: 0;
+  line-height: 1.7;
 }
 
 /* ===== ストリークメーター ===== */

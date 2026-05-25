@@ -4,7 +4,7 @@
  * バージョンを更新するとクライアントが新しいSWに更新される
  */
 
-const CACHE_VERSION = "insight-intake-v1.2.1";
+const CACHE_VERSION = "insight-intake-v1.3.0";
 const PRECACHE_ASSETS = [
   "./",
   "./index.html",
