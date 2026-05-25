@@ -121,73 +121,21 @@ function pushLog({ sync_type, target_sheet, status, message }) {
 }
 
 /* ============================================================
-   4. GAS スニペット (UI設定画面で表示・コピー)
+   4. GAS スクリプトのパス情報
+   GASコード本体は ./gas/Code.gs に分離 (一元管理)
    ============================================================ */
 
-export function getGASSnippet() {
-  return `// === Google Apps Script for 時流インサイト・ログ (v1.2) ===
-// 1) スプレッドシートにバインドして貼り付け
-// 2) デプロイ→新しいデプロイ→ウェブアプリ
-// 3) アクセス: 全員 / 実行: 自分
-// 4) 発行されたURLを設定画面の「GAS Web App URL」に貼り付け
-//
-// 機能:
-//  doPost  - 行の書き込み (articles/memos/feeds/...)
-//  doGet?sheet=...        - シート全件を取得 (マルチ端末同期)
-//  doGet?fetch=RSS_URL    - RSS取得プロキシ (CORS回避)
+export const GAS_CODE_URL = "./gas/Code.gs";
+export const GAS_SETUP_URL = "./gas/SETUP.md";
 
-function doPost(e) {
-  const ss = SpreadsheetApp.getActive();
-  const data = JSON.parse(e.postData.contents);
-  const sheetName = data.sheet;
-  const row = data.row;
-  let sh = ss.getSheetByName(sheetName);
-  if (!sh) sh = ss.insertSheet(sheetName);
-  let headers = sh.getLastRow() > 0
-    ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
-    : Object.keys(row);
-  if (sh.getLastRow() === 0) sh.appendRow(headers);
-  Object.keys(row).forEach(k => { if (!headers.includes(k)) headers.push(k); });
-  sh.getRange(1, 1, 1, headers.length).setValues([headers]);
-  const arr = headers.map(h => {
-    let v = row[h];
-    if (Array.isArray(v)) v = v.join("|");
-    if (v === undefined || v === null) v = "";
-    return typeof v === "object" ? JSON.stringify(v) : v;
-  });
-  sh.appendRow(arr);
-  return _json({ok:true, sheet:sheetName});
-}
-
-function doGet(e) {
-  // RSSプロキシ
-  if (e.parameter.fetch) {
-    try {
-      const res = UrlFetchApp.fetch(e.parameter.fetch, { muteHttpExceptions: true });
-      return _json({ok: res.getResponseCode() === 200, xml: res.getContentText()});
-    } catch(err) {
-      return _json({ok:false, error: String(err)});
-    }
+/** GAS コードを fetch して文字列で返す */
+export async function loadGASCode() {
+  if (typeof fetch === "undefined") return "// 取得不可 (fetch未対応)";
+  try {
+    const r = await fetch(GAS_CODE_URL);
+    if (!r.ok) return `// 取得失敗 (HTTP ${r.status})`;
+    return await r.text();
+  } catch (e) {
+    return "// 取得失敗: " + e.message;
   }
-  // シート取得 (マルチ端末同期)
-  if (e.parameter.sheet) {
-    const ss = SpreadsheetApp.getActive();
-    const sh = ss.getSheetByName(e.parameter.sheet);
-    if (!sh || sh.getLastRow() === 0) return _json({ok:true, rows:[]});
-    const values = sh.getDataRange().getValues();
-    const headers = values[0];
-    const rows = values.slice(1).map(r => {
-      const o = {};
-      headers.forEach((h, i) => { o[h] = r[i]; });
-      return o;
-    });
-    return _json({ok:true, rows});
-  }
-  return _json({ok:false, error:"sheet/fetch どちらかのパラメータが必要"});
-}
-
-function _json(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}`;
 }

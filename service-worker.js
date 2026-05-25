@@ -4,7 +4,7 @@
  * バージョンを更新するとクライアントが新しいSWに更新される
  */
 
-const CACHE_VERSION = "insight-intake-v1.2.0";
+const CACHE_VERSION = "insight-intake-v1.2.1";
 const PRECACHE_ASSETS = [
   "./",
   "./index.html",
@@ -33,7 +33,10 @@ const PRECACHE_ASSETS = [
   "./js/share-handler.js",
   "./js/dashboard.js",
   "./js/rss.js",
-  "./js/feeds.js"
+  "./js/feeds.js",
+
+  "./gas/Code.gs",
+  "./gas/SETUP.md"
 ];
 
 self.addEventListener("install", (event) => {

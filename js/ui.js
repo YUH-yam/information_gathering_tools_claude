@@ -18,7 +18,7 @@ import { generateWeeklyReview, generateMonthlyReview } from "./reviews.js";
 import {
   exportArticlesCSV, exportJSONBackup, importJSONBackup, downloadFile, copyText
 } from "./exporter.js";
-import { syncRowAsync, getGASSnippet, pullAll } from "./sync.js";
+import { syncRowAsync, loadGASCode, pullAll, GAS_CODE_URL, GAS_SETUP_URL } from "./sync.js";
 import { addFeed, deleteFeed, updateFeed, fetchAllEnabled, fetchFeedAndStore } from "./feeds.js";
 import { DEFAULT_CORS_PROXY } from "./rss.js";
 import { isTodayDone, missedYesterday, StreakEvents, markActive } from "./streak.js";
@@ -533,11 +533,15 @@ function renderSettings(root) {
         <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeHTML(st.gas_url || "")}" />
       </label>
       <button class="btn btn-block" id="saveGas">保存</button>
-      <details class="detail" style="margin-top:10px;">
+      <div class="micro" style="margin-top:8px;">
+        📄 <a href="${GAS_SETUP_URL}" target="_blank" rel="noopener">セットアップ手順 (SETUP.md)</a>
+        ／ <a href="${GAS_CODE_URL}" download>Code.gs をダウンロード</a>
+      </div>
+      <details class="detail" style="margin-top:10px;" id="gasDetails">
         <summary>GASコードを表示（コピペで設定）</summary>
         <div class="body">
-          <pre class="review-md">${escapeHTML(getGASSnippet())}</pre>
-          <button class="btn" id="copyGas">コードをコピー</button>
+          <pre class="review-md" id="gasCodeBox" style="max-height:280px; overflow:auto;">クリックして読み込み…</pre>
+          <button class="btn" id="copyGas">📋 コードをコピー</button>
         </div>
       </details>
     </div>
@@ -639,7 +643,22 @@ function renderSettings(root) {
     st.gas_url = $("#gasUrl").value.trim();
     Store.save(); toast("GAS URLを保存");
   });
-  bind("#copyGas", () => copyText(getGASSnippet()).then(() => toast("コピーしました")));
+  // GASコードを遅延ロード (details開いた瞬間に取得)
+  let gasCodeCache = null;
+  const gasDetails = $("#gasDetails");
+  if (gasDetails) {
+    gasDetails.addEventListener("toggle", async () => {
+      if (gasDetails.open && !gasCodeCache) {
+        gasCodeCache = await loadGASCode();
+        const box = $("#gasCodeBox");
+        if (box) box.textContent = gasCodeCache;
+      }
+    });
+  }
+  bind("#copyGas", async () => {
+    if (!gasCodeCache) gasCodeCache = await loadGASCode();
+    copyText(gasCodeCache).then(() => toast("コピーしました"));
+  });
 
   // マルチ端末同期
   bind("#autoPull", (e) => { st.auto_pull_on_startup = e.target.checked; Store.save(); }, "change");
