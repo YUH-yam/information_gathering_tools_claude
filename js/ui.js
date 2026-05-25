@@ -18,12 +18,17 @@ import { generateWeeklyReview, generateMonthlyReview } from "./reviews.js";
 import {
   exportArticlesCSV, exportJSONBackup, importJSONBackup, downloadFile, copyText
 } from "./exporter.js";
-import { syncRowAsync, getGASSnippet } from "./sync.js";
+import { syncRowAsync, getGASSnippet, pullAll } from "./sync.js";
+import { addFeed, deleteFeed, updateFeed, fetchAllEnabled, fetchFeedAndStore } from "./feeds.js";
+import { DEFAULT_CORS_PROXY } from "./rss.js";
 import { isTodayDone, missedYesterday, StreakEvents, markActive } from "./streak.js";
 import { loadSamples } from "./samples.js";
 import { __runSelfTests } from "./tests.js";
+import { renderDashboardHTML } from "./dashboard.js";
 
 let currentRoute = "home";
+// ルーター経由でレビュータブを切り替えるためのバッファ
+let pendingReviewTab = null;
 
 /* ---------- 小ヘルパ ---------- */
 function $(sel, ctx = document) { return ctx.querySelector(sel); }
@@ -41,7 +46,8 @@ export function toast(msg) {
 StreakEvents.onMessage = toast;
 
 /* ---------- ルーター ---------- */
-export function route(name) {
+export function route(name, opts = {}) {
+  if (opts.tab) pendingReviewTab = opts.tab;
   currentRoute = name;
   $all("nav.bottom-nav button").forEach((b) => b.classList.toggle("active", b.dataset.route === name));
   const view = $("#view"); view.innerHTML = "";
@@ -174,6 +180,8 @@ function renderHome(root) {
       <button class="btn btn-info" id="quickMemo">📝 メモを書く</button>
       <button class="btn" id="goToday">👀 おすすめ (${todayCount})</button>
       <button class="btn" id="goWeekly">📊 週次レビュー</button>
+      <button class="btn" id="goDashboard">📈 ダッシュボード</button>
+      <button class="btn" id="goTrends">🌐 トレンド</button>
     </div>
   </div>`;
 
@@ -202,18 +210,13 @@ function renderHome(root) {
       </div>
     </div>`;
 
-  // 外部トレンド
-  html += `<h2 class="section-title">外部トレンド観測</h2>
-    <div class="card">
-      <button class="btn btn-block" id="goTrends">🌐 トレンドサイトを見る</button>
-    </div>`;
-
   root.innerHTML = html;
 
   bind("#quickAdd", () => openAddArticleModal());
   bind("#quickMemo", () => openAddMemoModal());
   bind("#goToday", () => route("today"));
   bind("#goWeekly", () => route("reviews"));
+  bind("#goDashboard", () => route("reviews", { tab: "dashboard" }));
   bind("#goTrends", () => route("trends"));
   bind("#goTodayMore", () => route("today"));
   bind("#loadSamples", () => { loadSamples(); route("home"); });
@@ -337,18 +340,22 @@ function renderMemos(root) {
    8.5 振り返り (週次/月次/トレンド観測)
    ==================================================== */
 function renderReviews(root) {
-  let activeTab = "weekly";
+  // pendingReviewTab があればそれを採用
+  let activeTab = pendingReviewTab || "weekly";
+  pendingReviewTab = null;
   const paint = () => {
     root.innerHTML = `<div class="tabs">
       <button data-t="weekly" class="${activeTab === 'weekly' ? 'active' : ''}">週次</button>
       <button data-t="monthly" class="${activeTab === 'monthly' ? 'active' : ''}">月次</button>
-      <button data-t="trend" class="${activeTab === 'trend' ? 'active' : ''}">トレンド観測</button>
+      <button data-t="trend" class="${activeTab === 'trend' ? 'active' : ''}">観測</button>
+      <button data-t="dashboard" class="${activeTab === 'dashboard' ? 'active' : ''}">📊</button>
     </div><div id="rvBody"></div>`;
     $all(".tabs button", root).forEach((b) => b.addEventListener("click", () => { activeTab = b.dataset.t; paint(); }));
     const body = $("#rvBody", root);
     if (activeTab === "weekly") renderWeeklyBody(body);
     else if (activeTab === "monthly") renderMonthlyBody(body);
-    else renderTrendBody(body);
+    else if (activeTab === "trend") renderTrendBody(body);
+    else if (activeTab === "dashboard") body.innerHTML = renderDashboardHTML();
   };
   paint();
 }
@@ -521,7 +528,7 @@ function renderSettings(root) {
 
     <h2 class="section-title">Googleスプレッドシート連携</h2>
     <div class="card">
-      <p class="micro">GAS(Google Apps Script) Web App URL を貼ると、保存時に自動追記されます。空欄ならローカルのみ。</p>
+      <p class="micro">GAS(Google Apps Script) Web App URL を貼ると、保存時に自動追記＋マルチ端末同期＋RSSプロキシが使えます。空欄ならローカルのみ。</p>
       <label class="field"><span class="lbl">GAS Web App URL</span>
         <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeHTML(st.gas_url || "")}" />
       </label>
@@ -533,6 +540,57 @@ function renderSettings(root) {
           <button class="btn" id="copyGas">コードをコピー</button>
         </div>
       </details>
+    </div>
+
+    <h2 class="section-title">マルチ端末同期</h2>
+    <div class="card">
+      <p class="micro">GASを設定済みなら、複数の端末で同じデータを共有できます（最後の更新が勝つマージ方式）。</p>
+      <div class="setting-row">
+        <div>
+          <div class="label">起動時に自動プル</div>
+          <div class="desc">アプリ起動時にクラウドから最新を取得</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="autoPull" ${st.auto_pull_on_startup ? "checked" : ""} /></label>
+      </div>
+      <button class="btn btn-info btn-block" id="manualPull" style="margin-top:8px;">☁️ いますぐクラウドからプル</button>
+    </div>
+
+    <h2 class="section-title">RSSフィード管理</h2>
+    <div class="card">
+      <p class="micro">RSS/Atom フィードを登録すると、設定画面または同期画面から一括取得できます。GAS未設定の場合は下記のCORSプロキシ経由で取得します。</p>
+      <details class="detail">
+        <summary>＋ 新しいRSSを追加</summary>
+        <div class="body">
+          <label class="field"><span class="lbl">表示名</span><input type="text" id="newFeedName" placeholder="例: ITmedia AI＋" /></label>
+          <label class="field"><span class="lbl">RSS URL</span><input type="url" id="newFeedURL" placeholder="https://..." /></label>
+          <label class="field"><span class="lbl">カテゴリ（任意）</span>
+            <select id="newFeedCat">
+              <option value="">自動判定</option>
+              ${DEFAULT_CATEGORIES.map((c) => `<option>${c}</option>`).join("")}
+            </select>
+          </label>
+          <button class="btn btn-primary btn-block" id="addFeedBtn">追加</button>
+        </div>
+      </details>
+      <div id="feedList" style="margin-top:10px;"></div>
+      <button class="btn btn-block" id="fetchAllBtn" style="margin-top:8px;">📡 全フィードを取得</button>
+    </div>
+
+    <h2 class="section-title">CORSプロキシ（RSS取得用）</h2>
+    <div class="card">
+      <p class="micro">GAS未設定でもRSSが取れるよう、公開プロキシ経由でフェッチします。第三者サービスのため、不要なら OFF にしてください。</p>
+      <div class="setting-row">
+        <div>
+          <div class="label">CORSプロキシを使う</div>
+          <div class="desc">OFFにするとGAS設定済みの場合のみRSS取得可</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="proxyEnabled" ${st.cors_proxy_enabled !== false ? "checked" : ""} /></label>
+      </div>
+      <label class="field" style="margin-top:8px;"><span class="lbl">プロキシURL（空欄でデフォルト）</span>
+        <input type="url" id="proxyURL" placeholder="${escapeHTML(DEFAULT_CORS_PROXY)}" value="${escapeHTML(st.cors_proxy_url || "")}" />
+      </label>
+      <button class="btn btn-block" id="saveProxy">保存</button>
+      <div class="micro" style="margin-top:6px;">既定: <code>${escapeHTML(DEFAULT_CORS_PROXY)}</code>（最新の可用性は要確認）</div>
     </div>
 
     <h2 class="section-title">データ管理</h2>
@@ -582,6 +640,88 @@ function renderSettings(root) {
     Store.save(); toast("GAS URLを保存");
   });
   bind("#copyGas", () => copyText(getGASSnippet()).then(() => toast("コピーしました")));
+
+  // マルチ端末同期
+  bind("#autoPull", (e) => { st.auto_pull_on_startup = e.target.checked; Store.save(); }, "change");
+  bind("#manualPull", async () => {
+    if (!st.gas_url) { toast("GAS URLを先に設定してください"); return; }
+    toast("プル中…");
+    const r = await pullAll();
+    toast(`プル完了: 追加${r.added} 更新${r.updated}${r.errors.length?` エラー${r.errors.length}`:""}`);
+    route(currentRoute);
+  });
+
+  // RSS フィード管理
+  renderFeedList();
+  bind("#addFeedBtn", () => {
+    const n = $("#newFeedName").value.trim();
+    const u = $("#newFeedURL").value.trim();
+    const c = $("#newFeedCat").value;
+    if (!u) { toast("URLを入力してください"); return; }
+    const r = addFeed({ feed_name: n, feed_url: u, category: c });
+    if (!r.ok) { toast("追加失敗: " + (r.reason || "不明")); return; }
+    $("#newFeedName").value = ""; $("#newFeedURL").value = "";
+    toast("フィードを追加しました");
+    renderFeedList();
+  });
+  bind("#fetchAllBtn", async () => {
+    const feeds = Store.state.feeds.filter((f) => f.enabled);
+    if (feeds.length === 0) { toast("有効なフィードがありません"); return; }
+    toast(`取得中… (${feeds.length}件)`);
+    const r = await fetchAllEnabled();
+    toast(`取得完了: +${r.total_added}件${r.errors.length?` (エラー${r.errors.length})`:""}`);
+    renderFeedList();
+    route(currentRoute);
+  });
+
+  // CORSプロキシ
+  bind("#proxyEnabled", (e) => { st.cors_proxy_enabled = e.target.checked; Store.save(); }, "change");
+  bind("#saveProxy", () => {
+    st.cors_proxy_url = $("#proxyURL").value.trim();
+    Store.save(); toast("プロキシ設定を保存");
+  });
+
+  function renderFeedList() {
+    const list = Store.state.feeds;
+    const box = $("#feedList");
+    if (!box) return;
+    if (list.length === 0) {
+      box.innerHTML = `<div class="empty">まだフィードがありません</div>`;
+      return;
+    }
+    box.innerHTML = list.map((f) => `
+      <div class="feed-item" data-fid="${f.feed_id}">
+        <div style="flex:1;">
+          <div style="font-size:13px; font-weight:600;">${escapeHTML(f.feed_name)}</div>
+          <div class="micro">${escapeHTML(f.feed_url)}</div>
+          <div class="micro">${escapeHTML(f.category || "(自動)")}  ${f.last_status ? "・" + escapeHTML(f.last_status) : ""}</div>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button class="btn" data-act="toggle" title="有効/無効">${f.enabled ? "✅" : "⏸"}</button>
+          <button class="btn btn-info" data-act="fetch" title="このフィードを取得">📡</button>
+          <button class="btn btn-danger" data-act="del" title="削除">✕</button>
+        </div>
+      </div>
+    `).join("");
+    box.querySelectorAll(".feed-item").forEach((row) => {
+      const id = row.dataset.fid;
+      row.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", async () => {
+        const f = Store.state.feeds.find((x) => x.feed_id === id);
+        if (!f) return;
+        if (b.dataset.act === "toggle") {
+          updateFeed(id, { enabled: !f.enabled }); renderFeedList();
+        } else if (b.dataset.act === "fetch") {
+          toast("取得中…");
+          const r = await fetchFeedAndStore(f);
+          toast(r.ok ? `+${r.added}件取得` : `失敗: ${r.error}`);
+          renderFeedList();
+        } else if (b.dataset.act === "del") {
+          if (!confirm("削除しますか？")) return;
+          deleteFeed(id); renderFeedList();
+        }
+      }));
+    });
+  }
   bind("#expJson", () => exportJSONBackup());
   bind("#expCsv", () => exportArticlesCSV());
   bind("#impJsonBtn", () => $("#impJson").click());
@@ -617,8 +757,12 @@ function renderSync(root) {
     <div class="card">
       <div>GAS URL: ${Store.state.settings.gas_url ? "<span class='badge badge-ok'>設定済</span>" : "<span class='badge badge-warn'>未設定（ローカルのみ）</span>"}</div>
       <div style="margin-top:6px;">直近20件のうちエラー: ${errors}件</div>
-      <button class="btn btn-block" id="retryQueue" style="margin-top:8px;">🔁 失敗分を再送信</button>
-      <button class="btn btn-block" id="clearLogs" style="margin-top:6px;">同期ログをクリア</button>
+      <div class="quick-grid" style="margin-top:8px;">
+        <button class="btn btn-info" id="pullNow">☁️ クラウドからプル</button>
+        <button class="btn btn-info" id="fetchAllSync">📡 RSS一括取得</button>
+        <button class="btn" id="retryQueue">🔁 失敗分を再送信</button>
+        <button class="btn" id="clearLogs">同期ログをクリア</button>
+      </div>
     </div>`;
   html += logs.length === 0 ? `<div class="empty">同期ログはありません</div>` : logs.map((l) => `<div class="card" style="padding:10px;">
       <div class="meta">
@@ -638,6 +782,21 @@ function renderSync(root) {
     toast(`再送信を試みました (articles=${Store.state.articles.length}件)`);
   });
   bind("#clearLogs", () => { Store.state.sync_logs = []; Store.save(); route("sync"); });
+  bind("#pullNow", async () => {
+    if (!Store.state.settings.gas_url) { toast("GAS URLを先に設定してください"); return; }
+    toast("プル中…");
+    const r = await pullAll();
+    toast(`プル完了: 追加${r.added} 更新${r.updated}${r.errors.length?` エラー${r.errors.length}`:""}`);
+    route("sync");
+  });
+  bind("#fetchAllSync", async () => {
+    const feeds = Store.state.feeds.filter((f) => f.enabled);
+    if (feeds.length === 0) { toast("有効なフィードがありません（設定→RSSフィード管理で追加）"); return; }
+    toast(`取得中… (${feeds.length}件)`);
+    const r = await fetchAllEnabled();
+    toast(`取得完了: +${r.total_added}件${r.errors.length?` (エラー${r.errors.length})`:""}`);
+    route("sync");
+  });
 }
 
 /* ====================================================
@@ -656,15 +815,20 @@ function closeModal() {
 }
 window.__closeModal = closeModal; // モーダル内のonclick用
 
-function openAddArticleModal() {
+export function openAddArticleModal(preset = {}) {
+  const t = escapeHTML(preset.title || "");
+  const u = escapeHTML(preset.url || "");
+  const s = escapeHTML(preset.summary || "");
   openModal(`
     <div class="close-row"><h3>＋ URLを保存</h3><button class="icon-btn" onclick="__closeModal()">×</button></div>
-    <label class="field"><span class="lbl">URL（任意）</span><input type="url" id="m_url" placeholder="https://..." /></label>
-    <label class="field"><span class="lbl">タイトル（必須）</span><input type="text" id="m_title" placeholder="例：生成AIの広告活用事例" /></label>
-    <label class="field"><span class="lbl">概要・メモ（任意）</span><textarea id="m_summary" placeholder="ひとことでOK"></textarea></label>
+    <label class="field"><span class="lbl">URL（任意）</span><input type="url" id="m_url" placeholder="https://..." value="${u}" /></label>
+    <label class="field"><span class="lbl">タイトル（必須）</span><input type="text" id="m_title" placeholder="例：生成AIの広告活用事例" value="${t}" /></label>
+    <label class="field"><span class="lbl">概要・メモ（任意）</span><textarea id="m_summary" placeholder="ひとことでOK">${s}</textarea></label>
     <div class="micro" style="margin-bottom:8px;">カテゴリ・タグ・重要度は自動判定されます（後から変更可）。</div>
     <button class="btn btn-primary btn-block" id="m_submit">保存する</button>
   `);
+  // 共有由来でタイトルが空の場合、フォーカスを当てて入力を促す
+  setTimeout(() => { const ti = $("#m_title"); if (ti && !ti.value) ti.focus(); }, 50);
   bind("#m_submit", () => {
     const title = $("#m_title").value.trim();
     const url = $("#m_url").value.trim();
@@ -677,7 +841,7 @@ function openAddArticleModal() {
     route(currentRoute);
   });
 }
-function openAddMemoModal(relId = "") {
+export function openAddMemoModal(relId = "") {
   const rel = relId ? Store.state.articles.find((a) => a.article_id === relId) : null;
   openModal(`
     <div class="close-row"><h3>📝 気づきメモ</h3><button class="icon-btn" onclick="__closeModal()">×</button></div>

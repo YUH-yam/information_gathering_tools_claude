@@ -17,5 +17,45 @@
       "sizes": "any",
       "purpose": "any maskable"
     }
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "shared_title",
+      "text": "shared_text",
+      "url": "shared_url"
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "URLを保存",
+      "short_name": "URL保存",
+      "description": "見つけた記事をすぐ保存",
+      "url": "./index.html?action=add",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "メモを書く",
+      "short_name": "メモ",
+      "description": "気づきを1行で残す",
+      "url": "./index.html?action=memo",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "振り返り",
+      "short_name": "振り返り",
+      "description": "週次レビューを開く",
+      "url": "./index.html?action=reviews",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "ダッシュボード",
+      "short_name": "可視化",
+      "description": "傾向を一目で確認",
+      "url": "./index.html?action=dashboard",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "any" }]
+    }
   ]
 }

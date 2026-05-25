@@ -7,7 +7,9 @@
  */
 
 import { Store } from "./store.js";
-import { route, renderStreakChip, toast } from "./ui.js";
+import { route, renderStreakChip, toast, openAddArticleModal, openAddMemoModal } from "./ui.js";
+import { handleStartupQuery } from "./share-handler.js";
+import { pullAll } from "./sync.js";
 
 function bootstrap() {
   Store.load();
@@ -23,9 +25,20 @@ function bootstrap() {
   const settingsBtn = document.getElementById("openSettings");
   if (settingsBtn) settingsBtn.addEventListener("click", () => route("settings"));
 
+  // Share Target / shortcuts のクエリ処理 (初回描画後に発火)
+  handleStartupQuery({ openAddArticleModal, openAddMemoModal, route });
+
   // 初回案内
   if (Store.state.articles.length === 0 && !Store.state.sample_loaded) {
     setTimeout(() => toast("『サンプルを読み込む』で操作感を試せます"), 600);
+  }
+
+  // 起動時の自動プル (マルチ端末同期)
+  if (Store.state.settings.auto_pull_on_startup && Store.state.settings.gas_url) {
+    setTimeout(async () => {
+      const r = await pullAll();
+      if (r.added + r.updated > 0) toast(`☁️ 自動プル: +${r.added} 更新${r.updated}`);
+    }, 1200);
   }
 
   registerServiceWorker();

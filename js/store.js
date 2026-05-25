@@ -56,7 +56,11 @@ export const Store = {
         sync_mode: "manual",
         gas_url: "",
         ai_enabled: false,
-        notifications_enabled: false
+        notifications_enabled: false,
+        // 第2弾: マルチ端末同期 / RSS
+        auto_pull_on_startup: false,
+        cors_proxy_enabled: true,
+        cors_proxy_url: ""
       },
       streak: {
         current: 0,

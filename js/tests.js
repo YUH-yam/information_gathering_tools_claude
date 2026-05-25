@@ -17,6 +17,10 @@ import { generateWeeklyReview, generateMonthlyReview, renderWeeklyMarkdown } fro
 import { buildArticlesCSV } from "./exporter.js";
 import { markActive, isTodayDone, missedYesterday } from "./streak.js";
 import { TODAY_LIMIT } from "./config.js";
+import { parseQuery, extractURL } from "./share-handler.js";
+import { lastNDates, dailyCounts, importanceCounts, buildKPIs } from "./dashboard.js";
+import { parseFeedXML, stripTags } from "./rss.js";
+import { mergeRows } from "./sync.js";
 
 export function __runSelfTests() {
   const lines = [];
@@ -151,6 +155,88 @@ export function __runSelfTests() {
       arts:[], memos:[], importantArts:[], topTrends:[], tagFreq:[], catFreq:[]
     });
     assert("reviews: 空でもMarkdown返る", md.includes("週次レビュー") && md.includes("2026-05-19"));
+
+    /* ---- share-handler ---- */
+    assert("share: extractURL https", extractURL("見て https://example.com/x ←") === "https://example.com/x");
+    assert("share: extractURL なし", extractURL("plain text") === "");
+    const q1 = parseQuery("http://x/?shared_title=t&shared_text=u&shared_url=https%3A%2F%2Fa.b%2F");
+    assert("share: parseQuery 共有", q1.action === "share" && q1.sharedTitle === "t" && q1.sharedURL === "https://a.b/");
+    const q2 = parseQuery("http://x/?action=add");
+    assert("share: parseQuery action=add", q2.action === "add");
+    const q3 = parseQuery("http://x/?shared_text=see%20https%3A%2F%2Fy.com%20now");
+    assert("share: text内URL救出", q3.sharedURL === "https://y.com");
+    const q4 = parseQuery("http://x/");
+    assert("share: パラメータ無しはaction空", q4.action === "");
+
+    /* ---- dashboard 集計 ---- */
+    const dts = lastNDates(7, new Date("2026-05-25T00:00:00"));
+    assert("dashboard: lastNDates長さ", dts.length === 7);
+    assert("dashboard: lastNDates最新が末尾", dts[dts.length-1] === "2026-05-25");
+    assert("dashboard: lastNDates先頭が7日前", dts[0] === "2026-05-19");
+
+    Store.state.articles = [];
+    Store.state.memos = [];
+    Store.state.weekly_reviews = [];
+    Store.state.monthly_reviews = [];
+    const fixedNow = new Date("2026-05-25T12:00:00");
+    addArticleQuick({ title:"a1", url:"https://example.com/a", importance:"high" });
+    addArticleQuick({ title:"a2", url:"https://example.com/b", importance:"mid" });
+    addArticleQuick({ title:"a3", url:"https://example.com/c", importance:"low" });
+    const imp = importanceCounts(Store.state.articles);
+    assert("dashboard: 重要度集計", imp.find(x=>x.level==="high").count === 1
+      && imp.find(x=>x.level==="mid").count === 1
+      && imp.find(x=>x.level==="low").count === 1);
+
+    const dc = dailyCounts(Store.state.articles, 30, fixedNow);
+    assert("dashboard: dailyCounts長さ=30", dc.length === 30);
+    assert("dashboard: 全件数の合計", dc.reduce((s,x)=>s+x.count,0) === 3);
+
+    const kpi = buildKPIs(Store.state, 30, fixedNow);
+    assert("dashboard: KPI 累計記事", kpi.total_articles === 3);
+    assert("dashboard: KPI 30日件数", kpi.recent_articles === 3);
+    assert("dashboard: KPI 平均/日", kpi.avg_per_day === 0.1);
+
+    /* ---- RSS パース ---- */
+    const rssSample = `<?xml version="1.0"?><rss><channel>
+      <item><title>RSS記事1</title><link>https://a.example.com/1</link><description>summary1</description><pubDate>Mon, 25 May 2026 09:00:00 GMT</pubDate></item>
+      <item><title><![CDATA[CDATAタイトル&特殊文字]]></title><link>https://a.example.com/2</link><description>desc2</description></item>
+    </channel></rss>`;
+    const rssItems = parseFeedXML(rssSample);
+    assert("rss: 2件抽出", rssItems.length === 2);
+    assert("rss: タイトル取得", rssItems[0].title === "RSS記事1");
+    assert("rss: CDATA剥がし", rssItems[1].title === "CDATAタイトル&特殊文字");
+    assert("rss: link取得", rssItems[0].link === "https://a.example.com/1");
+
+    const atomSample = `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
+      <entry><title>Atom記事1</title><link href="https://b.example.com/x"/><updated>2026-05-25T00:00:00Z</updated><summary>atom summary</summary></entry>
+    </feed>`;
+    const atomItems = parseFeedXML(atomSample);
+    assert("rss: Atom 1件", atomItems.length === 1 && atomItems[0].title === "Atom記事1");
+    assert("rss: Atom link属性", atomItems[0].link === "https://b.example.com/x");
+
+    assert("rss: stripTags", stripTags("<p>hello <b>world</b></p>") === "hello world");
+    assert("rss: 空入力", parseFeedXML("").length === 0);
+
+    /* ---- マージ (LWW) ---- */
+    const local = [
+      { id: "a", updated_at: "2026-05-01T00:00:00Z", title: "local-a" },
+      { id: "b", updated_at: "2026-05-10T00:00:00Z", title: "local-b" }
+    ];
+    const remote = [
+      { id: "a", updated_at: "2026-05-20T00:00:00Z", title: "remote-a-newer" },
+      { id: "c", updated_at: "2026-05-05T00:00:00Z", title: "remote-c" }
+    ];
+    const mergeResult = mergeRows(local, remote, "id");
+    assert("merge: 件数=3", mergeResult.list.length === 3);
+    assert("merge: 追加=1 更新=1", mergeResult.added === 1 && mergeResult.updated === 1);
+    const aRow = mergeResult.list.find((x) => x.id === "a");
+    assert("merge: aは新しい方が勝つ", aRow.title === "remote-a-newer");
+    const bRow = mergeResult.list.find((x) => x.id === "b");
+    assert("merge: bはローカル維持", bRow.title === "local-b");
+
+    // タグの "|" 区切り → 配列復元
+    const mergeResult2 = mergeRows([], [{ id: "x", updated_at: "2026-05-01T00:00:00Z", tags: "AI|CX|DX" }], "id");
+    assert("merge: tags|を配列化", Array.isArray(mergeResult2.list[0].tags) && mergeResult2.list[0].tags.length === 3);
 
   } catch (e) {
     fail++; lines.push("✗ 例外発生: " + (e && e.message ? e.message : String(e)));
